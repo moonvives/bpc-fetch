@@ -5,3 +5,6 @@ dist/
 .codex/
 *.pyc
 .env
+
+# Working directory for video subtitling (audio, models, rendered videos) — not source
+legendas/
