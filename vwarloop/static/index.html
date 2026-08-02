@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0d0d">
+<title>VWAR Loop</title>
+<link rel="manifest" href="/manifest.json">
+<style>
+  /* Paleta validada (dataviz skill): superficie escura, series azul/aqua/etc. */
+  :root{
+    --bg:#0d0d0d; --surface:#1a1a19; --surface-2:#141413; --line:#2c2c2a;
+    --axis:#383835; --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+    --s-blue:#3987e5; --s-aqua:#199e70; --s-yellow:#c98500; --s-red:#e66767;
+    --s-violet:#9085e9;
+    --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
+    --radius:14px;
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    -webkit-font-smoothing:antialiased;padding-bottom:84px}
+  a{color:var(--s-blue)}
+  h1,h2,h3{font-weight:600;letter-spacing:-0.01em}
+  .wrap{max-width:940px;margin:0 auto;padding:20px 16px}
+  header{display:flex;align-items:baseline;justify-content:space-between;
+    padding:6px 2px 16px}
+  header .brand{font-size:15px;font-weight:700;letter-spacing:0.14em;
+    text-transform:uppercase;color:var(--ink)}
+  header .date{font-size:13px;color:var(--muted)}
+  .card{background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);padding:18px}
+  .grid{display:grid;gap:14px}
+  .tiles{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:640px){.tiles{grid-template-columns:repeat(2,1fr)}}
+  .muted{color:var(--muted)}
+  .sec-title{font-size:12px;letter-spacing:0.12em;text-transform:uppercase;
+    color:var(--muted);margin:26px 2px 10px}
+
+  /* Ring (Recovery / Loop Score) */
+  .hero{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+  .ring-wrap{position:relative;width:168px;height:168px;flex:0 0 auto}
+  .ring-num{position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center}
+  .ring-num b{font-size:46px;line-height:1;font-weight:700}
+  .ring-num span{font-size:11px;letter-spacing:0.14em;text-transform:uppercase;
+    color:var(--muted);margin-top:6px}
+  .breakdown{flex:1;min-width:240px}
+  .bd-row{display:grid;grid-template-columns:96px 1fr 40px;gap:10px;
+    align-items:start;padding:9px 0}
+  .bd-row .lbl,.bd-row .val{padding-top:1px}
+  .bd-row .lbl{font-size:13px;color:var(--ink-2)}
+  .bd-row .val{font-size:13px;text-align:right;color:var(--ink);
+    font-variant-numeric:tabular-nums}
+  .bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+  .bar>i{display:block;height:100%;border-radius:3px;background:var(--s-blue)}
+  .bd-detail{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.35}
+
+  /* Stat tiles */
+  .tile b{display:block;font-size:28px;font-weight:700;
+    font-variant-numeric:tabular-nums;line-height:1.1}
+  .tile .k{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;
+    color:var(--muted)}
+  .tile .d{font-size:12px;margin-top:6px;font-variant-numeric:tabular-nums}
+  .up{color:var(--good)} .down{color:var(--s-red)} .flat{color:var(--muted)}
+
+  /* Charts */
+  .chart-card h3{margin:0 0 2px;font-size:14px}
+  .chart-card .sub{font-size:12px;color:var(--muted);margin-bottom:8px}
+  svg.chart{width:100%;height:150px;display:block;overflow:visible}
+  .chart-empty{height:150px;display:flex;align-items:center;justify-content:center;
+    color:var(--muted);font-size:13px}
+  .tt{position:fixed;pointer-events:none;background:#000;border:1px solid var(--axis);
+    border-radius:8px;padding:6px 9px;font-size:12px;color:var(--ink);
+    z-index:40;opacity:0;transition:opacity .08s;white-space:nowrap}
+
+  /* Provenance */
+  .prov-row{display:grid;grid-template-columns:1fr auto auto auto;gap:8px 10px;
+    align-items:center;padding:11px 0;border-top:1px solid var(--line);font-size:13px}
+  .prov-row:first-child{border-top:0}
+  .prov-row .who{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:-4px}
+  @media(max-width:560px){
+    .prov-row{grid-template-columns:1fr}
+    .prov-row .pills{display:flex;gap:6px;flex-wrap:wrap}
+  }
+  .pill{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--axis);
+    color:var(--ink-2);white-space:nowrap}
+  .q-confiavel{color:#7fdc9a;border-color:#25603a}
+  .q-parcial{color:#f0c86a;border-color:#5c4a1e}
+  .q-escasso,.q-sem_dados{color:#e79a9a;border-color:#5c2626}
+
+  /* Forms */
+  label.f{display:block;margin:0 0 12px}
+  label.f .cap{font-size:12px;color:var(--ink-2);margin-bottom:5px;display:block}
+  input,select,textarea,button{font-family:inherit;font-size:14px}
+  input,select,textarea{width:100%;background:var(--surface-2);color:var(--ink);
+    border:1px solid var(--axis);border-radius:9px;padding:10px 11px}
+  textarea{min-height:64px;resize:vertical}
+  .form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0 14px}
+  @media(max-width:640px){.form-grid{grid-template-columns:1fr}}
+  .btn{background:var(--s-blue);color:#fff;border:0;border-radius:10px;
+    padding:11px 18px;font-weight:600;cursor:pointer}
+  .btn.ghost{background:transparent;border:1px solid var(--axis);color:var(--ink-2)}
+  .btn:active{transform:translateY(1px)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+  /* Coach */
+  .chat{display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto;
+    padding:4px}
+  .msg{max-width:86%;padding:10px 13px;border-radius:13px;font-size:14px;line-height:1.5;
+    white-space:pre-wrap}
+  .msg.u{align-self:flex-end;background:var(--s-blue);color:#fff;
+    border-bottom-right-radius:4px}
+  .msg.a{align-self:flex-start;background:var(--surface-2);border:1px solid var(--line);
+    border-bottom-left-radius:4px}
+  .msg.err{align-self:stretch;background:#2a1414;border:1px solid #5c2626;color:#e79a9a}
+
+  /* Breathing */
+  .breath-stage{display:flex;flex-direction:column;align-items:center;gap:18px;
+    padding:12px 0}
+  .breath-orb{width:170px;height:170px;border-radius:50%;
+    background:radial-gradient(circle at 50% 40%,#2b6fc0,#12385f);
+    transition:transform 4s cubic-bezier(.4,0,.4,1);transform:scale(.55)}
+  .breath-orb.in{transform:scale(1)}
+  .breath-orb.out{transition-duration:6s;transform:scale(.55)}
+  .breath-cue{font-size:20px;font-weight:600;letter-spacing:.02em}
+  .breath-sub{font-size:13px;color:var(--muted)}
+
+  /* Nav */
+  nav{position:fixed;left:0;right:0;bottom:0;background:rgba(13,13,13,.94);
+    backdrop-filter:blur(10px);border-top:1px solid var(--line);
+    display:flex;justify-content:space-around;padding:8px 4px 14px;z-index:30}
+  nav button{background:0;border:0;color:var(--muted);font-size:11px;font-weight:600;
+    letter-spacing:.06em;text-transform:uppercase;padding:6px 8px;cursor:pointer}
+  nav button.on{color:var(--ink)}
+  .view{display:none}
+  .view.on{display:block}
+  .disclaimer{font-size:11px;color:var(--muted);line-height:1.5;margin-top:10px}
+  .toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%);
+    background:#000;border:1px solid var(--axis);border-radius:10px;padding:10px 16px;
+    font-size:13px;opacity:0;transition:opacity .2s;z-index:50}
+  .toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">VWAR&nbsp;Loop</div>
+    <div class="date" id="today"></div>
+  </header>
+
+  <!-- ================= HOJE ================= -->
+  <section class="view on" id="v-home">
+    <div class="card hero" id="hero">
+      <div class="ring-wrap">
+        <svg viewBox="0 0 120 120" width="168" height="168">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="var(--line)" stroke-width="10"/>
+          <circle id="ring" cx="60" cy="60" r="52" fill="none" stroke="var(--s-blue)"
+            stroke-width="10" stroke-linecap="round" stroke-dasharray="326.7"
+            stroke-dashoffset="326.7" transform="rotate(-90 60 60)"
+            style="transition:stroke-dashoffset .8s ease,stroke .3s"/>
+        </svg>
+        <div class="ring-num"><b id="ring-num">--</b><span>Recovery</span></div>
+      </div>
+      <div class="breakdown" id="breakdown">
+        <div class="muted" style="font-size:13px">Sem check-in de hoje. Toque em
+          <b style="color:var(--ink)">Check-in</b> para registrar.</div>
+      </div>
+    </div>
+
+    <div class="sec-title">Últimos 7 dias</div>
+    <div class="grid tiles" id="tiles"></div>
+
+    <div class="sec-title">Tendências</div>
+    <div class="grid" id="charts" style="grid-template-columns:1fr"></div>
+
+    <p class="disclaimer">Dispositivo de bem-estar, não médico. FC, HRV, SpO2, sono e
+      passos são tendências. Estimativas de "ácido úrico", "lipídios", "glicose" e
+      "pressão arterial" da pulseira não têm validação clínica e são ignoradas aqui.</p>
+  </section>
+
+  <!-- ================= CHECK-IN ================= -->
+  <section class="view" id="v-log">
+    <h2 style="margin:4px 2px 14px;font-size:20px">Check-in diário</h2>
+    <div class="card">
+      <form id="log-form">
+        <label class="f"><span class="cap">Data</span><input type="date" name="day"></label>
+        <div class="form-grid">
+          <label class="f"><span class="cap">Sono (horas)</span>
+            <input type="number" name="sleep_hours" step="0.1" min="0" max="16" inputmode="decimal"></label>
+          <label class="f"><span class="cap">Qualidade do sono (1–5)</span>
+            <input type="number" name="sleep_quality" step="1" min="1" max="5" inputmode="numeric"></label>
+          <label class="f"><span class="cap">FC de repouso (bpm)</span>
+            <input type="number" name="resting_hr" step="1" min="30" max="120" inputmode="numeric"></label>
+          <label class="f"><span class="cap">HRV / RMSSD (ms)</span>
+            <input type="number" name="hrv" step="1" min="0" max="250" inputmode="numeric"></label>
+          <label class="f"><span class="cap">SpO2 (%)</span>
+            <input type="number" name="spo2" step="1" min="70" max="100" inputmode="numeric"></label>
+          <label class="f"><span class="cap">Peso (kg)</span>
+            <input type="number" name="weight" step="0.1" min="0" inputmode="decimal"></label>
+          <label class="f"><span class="cap">Energia (1–5)</span>
+            <input type="number" name="energy" step="1" min="1" max="5" inputmode="numeric"></label>
+          <label class="f"><span class="cap">Estresse (1–5)</span>
+            <input type="number" name="stress" step="1" min="1" max="5" inputmode="numeric"></label>
+          <label class="f"><span class="cap">Dor muscular (1–5)</span>
+            <input type="number" name="soreness" step="1" min="1" max="5" inputmode="numeric"></label>
+          <label class="f"><span class="cap">Foco / produtividade (1–5)</span>
+            <input type="number" name="focus" step="1" min="1" max="5" inputmode="numeric"></label>
+          <label class="f"><span class="cap">Treino (min)</span>
+            <input type="number" name="workout_minutes" step="1" min="0" inputmode="numeric"></label>
+          <label class="f"><span class="cap">Intensidade do treino (1–5)</span>
+            <input type="number" name="workout_intensity" step="1" min="1" max="5" inputmode="numeric"></label>
+        </div>
+        <label class="f"><span class="cap">Tipo de treino</span>
+          <input type="text" name="workout_type" placeholder="corrida, força, mobilidade..."></label>
+        <label class="f"><span class="cap">Notas do dia</span>
+          <textarea name="notes" placeholder="sono agitado, café tarde, dia estressante no trabalho..."></textarea></label>
+        <div class="row">
+          <button type="submit" class="btn">Salvar dia</button>
+          <span class="muted" id="log-status" style="font-size:13px"></span>
+        </div>
+      </form>
+    </div>
+    <p class="disclaimer">Leia os valores da pulseira no app G Band e registre aqui em ~30s.
+      Você também pode capturá-los direto por Bluetooth com <code>tools/vwar_ble.py</code>
+      (veja o README).</p>
+  </section>
+
+  <!-- ================= COACH ================= -->
+  <section class="view" id="v-coach">
+    <h2 style="margin:4px 2px 14px;font-size:20px">Coach</h2>
+    <div class="card">
+      <div class="chat" id="chat">
+        <div class="msg a">Sou seu coach. Pergunte, por exemplo: "como está minha
+recuperação?", "melhores horários pra treinar com base no meu histórico" ou
+"o que está afetando meu foco?". Respondo com base nos seus últimos 30 dias e
+sempre digo o quanto confiar em cada métrica.</div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <input id="coach-input" placeholder="Escreva sua pergunta..." style="flex:1">
+        <button class="btn" id="coach-send">Enviar</button>
+      </div>
+      <p class="disclaimer" id="coach-note"></p>
+    </div>
+  </section>
+
+  <!-- ================= INCERTEZA ================= -->
+  <section class="view" id="v-data">
+    <h2 style="margin:4px 2px 6px;font-size:20px">Qualidade dos dados</h2>
+    <p class="disclaimer" style="margin:0 2px 14px">A incerteza vem antes das
+      conclusões: fonte, cobertura nos últimos 30 dias, lacuna desde a última medida e
+      se há baseline pessoal. Sinal ruidoso não deve parecer preciso.</p>
+    <div class="card" id="prov"></div>
+
+    <div class="sec-title">Respiração coerente</div>
+    <div class="card">
+      <div class="breath-stage">
+        <div class="breath-orb" id="orb"></div>
+        <div class="breath-cue" id="breath-cue">Pronto</div>
+        <div class="breath-sub" id="breath-sub">Inspire 4s • Expire 6s • ~5,5 rpm • 5 min</div>
+        <button class="btn" id="breath-btn">Iniciar 5 min</button>
+      </div>
+      <p class="disclaimer">Respiração coerente a ~5,5 respirações por minuto sincroniza
+        os ritmos do coração e da respiração; é a intervenção mais estudada para elevar o
+        HRV e restaurar o tônus parassimpático.</p>
+    </div>
+
+    <div class="sec-title">Dados</div>
+    <div class="card">
+      <div class="row">
+        <button class="btn ghost" id="export-btn">Exportar JSON</button>
+        <button class="btn ghost" id="import-btn">Importar JSON</button>
+        <input type="file" id="import-file" accept="application/json" style="display:none">
+      </div>
+      <div class="sec-title" style="margin-top:20px">Coach (chave de API)</div>
+      <label class="f"><span class="cap">Chave da Anthropic (fica só neste computador,
+        em ~/.vwarloop/config.json)</span>
+        <input type="password" id="api-key" placeholder="sk-ant-..."></label>
+      <label class="f"><span class="cap">Meta de sono (horas)</span>
+        <input type="number" id="goal-sleep" step="0.5" min="4" max="12" value="8"></label>
+      <div class="row"><button class="btn" id="save-settings">Salvar configurações</button>
+        <span class="muted" id="set-status" style="font-size:13px"></span></div>
+    </div>
+    <p class="disclaimer" style="margin-top:14px">Todos os dados vivem em
+      <code>~/.vwarloop</code>. Sem servidor, sem conta, sem telemetria. Uso pessoal,
+      não comercial.</p>
+  </section>
+</div>
+
+<nav>
+  <button class="on" data-v="home">Hoje</button>
+  <button data-v="log">Check-in</button>
+  <button data-v="coach">Coach</button>
+  <button data-v="data">Dados</button>
+</nav>
+<div class="tt" id="tt"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const fmt=(v,d=0)=>v==null?"--":Number(v).toFixed(d);
+const BAND={good:"var(--good)",warning:"var(--warn)",serious:"var(--serious)",
+  critical:"var(--crit)",unknown:"var(--muted)"};
+let STATS=null;
+
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");
+  setTimeout(()=>t.classList.remove("on"),1800);}
+
+// ---- nav ----
+$$("nav button").forEach(b=>b.onclick=()=>{
+  $$("nav button").forEach(x=>x.classList.toggle("on",x===b));
+  $$(".view").forEach(v=>v.classList.remove("on"));
+  $("#v-"+b.dataset.v).classList.add("on");
+  window.scrollTo(0,0);
+});
+
+// ---- load ----
+async function load(){
+  STATS=await (await fetch("/api/stats")).json();
+  renderHero(); renderTiles(); renderCharts(); renderProv();
+}
+function renderHero(){
+  const sc=STATS.scores, n=sc.loop_score;
+  const ring=$("#ring"), C=2*Math.PI*52;
+  ring.style.strokeDashoffset=n==null?C:C*(1-n/100);
+  ring.style.stroke=BAND[sc.band]||"var(--s-blue)";
+  $("#ring-num").textContent=n==null?"--":n;
+  const bd=$("#breakdown");
+  if(!sc.components.length){return;}
+  bd.innerHTML=`<div class="muted" style="font-size:12px;margin-bottom:6px">
+    Confiança do score: <b style="color:var(--ink)">${sc.confidence}</b>${
+    sc.strain!=null?` &nbsp;·&nbsp; Strain hoje: <b style="color:var(--ink)">${sc.strain}</b>/21`:""}</div>`+
+    sc.components.map(c=>`
+    <div class="bd-row">
+      <div class="lbl">${c.label}</div>
+      <div><div class="bar"><i style="width:${c.score}%"></i></div>
+        <div class="bd-detail">${c.detail}</div></div>
+      <div class="val">${c.score}</div>
+    </div>`).join("");
+}
+function renderTiles(){
+  const T=STATS.tiles, defs=[
+    ["resting_hr","FC repouso","bpm",0,true],
+    ["hrv","HRV","ms",0,false],
+    ["sleep_hours","Sono","h",1,false],
+    ["spo2","SpO2","%",0,false]];
+  $("#tiles").innerHTML=defs.map(([k,lbl,u,dec,lowerBetter])=>{
+    const t=T[k]||{}, v=t.value, d=t.delta;
+    let dh="";
+    if(d!=null&&Math.abs(d)>=(dec?0.05:0.5)){
+      const good=lowerBetter?d<0:d>0;
+      dh=`<div class="d ${good?'up':'down'}">${d>0?'+':''}${fmt(d,dec)} vs. 7d ant.</div>`;
+    }else if(d!=null){dh=`<div class="d flat">estável</div>`;}
+    return `<div class="card tile"><div class="k">${lbl}</div>
+      <b>${fmt(v,dec)}<span class="muted" style="font-size:13px;font-weight:400"> ${u}</span></b>${dh}</div>`;
+  }).join("");
+}
+
+// ---- SVG line chart with crosshair ----
+function lineChart(data,color,unit,dec){
+  if(!data||data.length<2) return `<div class="chart-empty">Dados insuficientes ainda</div>`;
+  const W=880,H=150,pl=6,pr=6,pt=12,pb=18;
+  const xs=data.map((_,i)=>i), ys=data.map(d=>d.value);
+  const minY=Math.min(...ys), maxY=Math.max(...ys), span=(maxY-minY)||1;
+  const X=i=>pl+(i/(data.length-1))*(W-pl-pr);
+  const Y=v=>pt+(1-(v-minY)/span)*(H-pt-pb);
+  const path=data.map((d,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(d.value).toFixed(1)}`).join(" ");
+  const dots=data.map((d,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(d.value).toFixed(1)}"
+    r="8" fill="transparent" data-x="${X(i).toFixed(1)}" data-y="${Y(d.value).toFixed(1)}"
+    data-day="${d.day}" data-val="${d.value}"/>`).join("");
+  const grid=[0,.5,1].map(f=>{const y=pt+f*(H-pt-pb);
+    return `<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-width="1"/>`}).join("");
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"
+      data-unit="${unit}" data-dec="${dec}">
+    ${grid}
+    <path d="${path}" fill="none" stroke="${color}" stroke-width="2"
+      stroke-linejoin="round" stroke-linecap="round"/>
+    <line class="cross" x1="0" x2="0" y1="${pt}" y2="${H-pb}" stroke="var(--axis)"
+      stroke-width="1" style="opacity:0"/>
+    <circle class="focus" r="4.5" fill="${color}" stroke="var(--surface)" stroke-width="2"
+      style="opacity:0"/>
+    ${dots}
+  </svg>`;
+}
+function renderCharts(){
+  const S=STATS.series, defs=[
+    ["loop_score","Recovery","var(--s-blue)","",0,"Loop Score diário (0–100)"],
+    ["hrv","HRV","var(--s-aqua)","ms",0,"RMSSD, ms"],
+    ["resting_hr","FC de repouso","var(--s-yellow)","bpm",0,"batimentos por minuto"],
+    ["sleep_hours","Sono","var(--s-violet)","h",1,"horas por noite"]];
+  $("#charts").innerHTML=defs.map(([k,title,color,unit,dec,sub])=>`
+    <div class="card chart-card"><h3>${title}</h3><div class="sub">${sub}</div>
+    ${lineChart(S[k],color,unit,dec)}</div>`).join("");
+  wireCharts();
+}
+function wireCharts(){
+  const tt=$("#tt");
+  $$("svg.chart").forEach(svg=>{
+    const dots=$$("circle[data-day]",svg), cross=$(".cross",svg), foc=$(".focus",svg);
+    const unit=svg.dataset.unit, dec=+svg.dataset.dec;
+    svg.addEventListener("pointermove",e=>{
+      const r=svg.getBoundingClientRect();
+      const px=(e.clientX-r.left)/r.width*880;
+      let best=null,bd=1e9;
+      dots.forEach(d=>{const dx=Math.abs(+d.dataset.x-px);if(dx<bd){bd=dx;best=d;}});
+      if(!best)return;
+      cross.setAttribute("x1",best.dataset.x);cross.setAttribute("x2",best.dataset.x);
+      cross.style.opacity=1;
+      foc.setAttribute("cx",best.dataset.x);foc.setAttribute("cy",best.dataset.y);
+      foc.style.opacity=1;
+      tt.textContent=`${best.dataset.day}: ${Number(best.dataset.val).toFixed(dec)} ${unit}`;
+      tt.style.left=Math.min(e.clientX+12,innerWidth-140)+"px";
+      tt.style.top=(e.clientY-40)+"px";tt.style.opacity=1;
+    });
+    svg.addEventListener("pointerleave",()=>{cross.style.opacity=0;foc.style.opacity=0;
+      tt.style.opacity=0;});
+  });
+}
+function renderProv(){
+  $("#prov").innerHTML=STATS.provenance.map(p=>{
+    const q={confiavel:"Confiável",parcial:"Parcial",escasso:"Escasso",
+      sem_dados:"Sem dados"}[p.quality]||p.quality;
+    const gap=p.gap_days==null?"—":p.gap_days+"d";
+    return `<div class="prov-row">
+      <div><b>${p.label}</b></div>
+      <div class="pills">
+        <span class="pill">${p.coverage_30d}/30 dias</span>
+        <span class="pill">lacuna ${gap}</span>
+        <span class="pill q-${p.quality}">${q}</span>
+      </div>
+      <div class="who">fonte: ${p.source}${p.has_baseline
+        ? " · baseline pessoal estabelecido" : " · sem baseline ainda"}</div></div>`;
+  }).join("");
+}
+
+// ---- check-in form ----
+$("#log-form").querySelector('[name=day]').value=new Date().toISOString().slice(0,10);
+$("#log-form").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const fd=new FormData(e.target), body={source:"manual"};
+  for(const [k,v] of fd.entries()) if(v!=="") body[k]=v;
+  const r=await fetch("/api/entries",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(body)});
+  if(r.ok){$("#log-status").textContent="Salvo.";toast("Dia salvo");await load();
+    setTimeout(()=>$("#log-status").textContent="",2500);}
+  else{$("#log-status").textContent="Erro ao salvar.";}
+});
+
+// ---- coach ----
+let convo=[];
+async function sendCoach(){
+  const inp=$("#coach-input"), text=inp.value.trim(); if(!text)return;
+  inp.value="";
+  addMsg("u",text); convo.push({role:"user",content:text});
+  const wait=addMsg("a","Pensando...");
+  const r=await fetch("/api/coach",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({messages:convo})});
+  const j=await r.json(); wait.remove();
+  if(j.reply){addMsg("a",j.reply);convo.push({role:"assistant",content:j.reply});}
+  else{addMsg("err",j.message||"Erro no coach.");}
+}
+function addMsg(cls,text){const d=document.createElement("div");
+  d.className="msg "+cls;d.textContent=text;$("#chat").appendChild(d);
+  $("#chat").scrollTop=$("#chat").scrollHeight;return d;}
+$("#coach-send").onclick=sendCoach;
+$("#coach-input").addEventListener("keydown",e=>{if(e.key==="Enter")sendCoach();});
+
+// ---- settings ----
+async function loadSettings(){
+  const s=await (await fetch("/api/settings")).json();
+  $("#goal-sleep").value=(s.goals&&s.goals.sleep_hours)||8;
+  $("#coach-note").textContent=s.has_api_key
+    ? "Coach pronto (chave configurada). Usa o modelo Claude com a sua conta."
+    : "Adicione sua chave da Anthropic em Dados para ativar o coach.";
+}
+$("#save-settings").onclick=async()=>{
+  const body={goals:{sleep_hours:+$("#goal-sleep").value||8}};
+  const key=$("#api-key").value.trim(); if(key) body.anthropic_api_key=key;
+  await fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(body)});
+  $("#api-key").value="";$("#set-status").textContent="Salvo.";toast("Configurações salvas");
+  loadSettings();setTimeout(()=>$("#set-status").textContent="",2500);
+};
+$("#export-btn").onclick=async()=>{
+  const data=await (await fetch("/api/export")).json();
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download="vwarloop-backup-"+new Date().toISOString().slice(0,10)+".json";a.click();
+};
+$("#import-btn").onclick=()=>$("#import-file").click();
+$("#import-file").onchange=async e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const data=JSON.parse(await f.text());
+  const r=await fetch("/api/import",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({entries:data.entries||[]})});
+  const j=await r.json();toast("Importados "+(j.imported||0)+" dias");await load();
+};
+
+// ---- breathing (4s in / 6s out, ~5.5 rpm, 5 min) ----
+let breathTimer=null, breathEnd=0;
+$("#breath-btn").onclick=()=>{
+  if(breathTimer){stopBreath();return;}
+  breathEnd=Date.now()+5*60*1000;
+  $("#breath-btn").textContent="Parar";
+  cycle();
+  breathTimer=setInterval(()=>{
+    const left=Math.max(0,breathEnd-Date.now());
+    $("#breath-sub").textContent=left<=0?"Concluído":
+      `Restam ${Math.ceil(left/1000/60)} min`;
+    if(left<=0)stopBreath();
+  },1000);
+};
+function cycle(){
+  const orb=$("#orb");
+  orb.classList.remove("out");orb.classList.add("in");
+  $("#breath-cue").textContent="Inspire";
+  setTimeout(()=>{if(!breathTimer&&breathEnd<Date.now())return;
+    orb.classList.remove("in");orb.classList.add("out");
+    $("#breath-cue").textContent="Expire";},4000);
+  setTimeout(()=>{if(breathEnd>Date.now())cycle();},10000);
+}
+function stopBreath(){clearInterval(breathTimer);breathTimer=null;
+  $("#breath-btn").textContent="Iniciar 5 min";$("#breath-cue").textContent="Pronto";
+  $("#breath-sub").textContent="Inspire 4s • Expire 6s • ~5,5 rpm • 5 min";
+  $("#orb").classList.remove("in","out");}
+
+// ---- init ----
+$("#today").textContent=new Date().toLocaleDateString("pt-BR",
+  {weekday:"long",day:"numeric",month:"long"});
+load(); loadSettings();
+if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{});}
+</script>
+</body>
+</html>

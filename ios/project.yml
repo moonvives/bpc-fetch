@@ -1,0 +1,66 @@
+# Especificação do XcodeGen. Gera o projeto Xcode a partir deste arquivo.
+#
+#   brew install xcodegen
+#   cd ios && xcodegen generate && open VwarLoop.xcodeproj
+#
+# Antes de compilar no seu aparelho, troque PRODUCT_BUNDLE_IDENTIFIER por um
+# identificador que você controla e DEVELOPMENT_TEAM pelo seu Team ID da Apple.
+# A integração contínua compila sem assinatura e não precisa desses valores.
+
+name: VwarLoop
+options:
+  bundleIdPrefix: com.example.vwarloop
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    SWIFT_STRICT_CONCURRENCY: minimal
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  VwarLoop:
+    type: application
+    platform: iOS
+    sources:
+      - path: VwarLoop
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.vwarloop
+        PRODUCT_NAME: VWAR Loop
+        MARKETING_VERSION: "2.0"
+        CURRENT_PROJECT_VERSION: "1"
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: >-
+          UIInterfaceOrientationPortrait
+          UIInterfaceOrientationLandscapeLeft
+          UIInterfaceOrientationLandscapeRight
+        # Sem UIUserInterfaceStyle: a interface acompanha a preferência do
+        # sistema e tem versões clara e escura acessíveis.
+        TARGETED_DEVICE_FAMILY: "1,2"   # iPhone e iPad
+    info:
+      path: VwarLoop/Info.plist
+      properties:
+        CFBundleDisplayName: VWAR Loop
+        CFBundleLocalizations: [pt-BR, en]
+        CFBundleDevelopmentRegion: pt-BR
+        # Textos exibidos pelo sistema ao pedir permissão. Sem eles o aplicativo
+        # encerra ao acessar a Saúde.
+        NSHealthShareUsageDescription: >-
+          O VWAR Loop lê sono, atividade, frequência cardíaca e as leituras de
+          pressão registradas na Saúde para acompanhar tendências. Os dados são
+          processados no próprio aparelho.
+        NSHealthUpdateUsageDescription: >-
+          O VWAR Loop grava na Saúde apenas os registros que você autorizar.
+    entitlements:
+      path: VwarLoop/VwarLoop.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
