@@ -10,6 +10,13 @@ Requer iOS 17 ou superior.
 
 ## Como conseguir o IPA
 
+**Link mais recente, abrível no Safari do próprio iPhone/iPad:**
+https://github.com/moonvives/bpc-fetch/releases
+
+Abra o release mais novo e toque em `VwarLoop-unsigned.ipa`. O download vai
+direto para Arquivos, de onde o AltStore/SideStore consegue abri-lo.
+
+
 A cada push que toca `ios/`, o workflow **Build iOS IPA (unsigned)** compila num
 runner macOS do GitHub Actions e publica o arquivo.
 
