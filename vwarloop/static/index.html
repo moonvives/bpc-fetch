@@ -47,13 +47,14 @@
     color:var(--muted);margin-top:6px}
   .breakdown{flex:1;min-width:240px}
   .bd-row{display:grid;grid-template-columns:96px 1fr 40px;gap:10px;
-    align-items:center;padding:7px 0}
+    align-items:start;padding:9px 0}
+  .bd-row .lbl,.bd-row .val{padding-top:1px}
   .bd-row .lbl{font-size:13px;color:var(--ink-2)}
   .bd-row .val{font-size:13px;text-align:right;color:var(--ink);
     font-variant-numeric:tabular-nums}
   .bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
   .bar>i{display:block;height:100%;border-radius:3px;background:var(--s-blue)}
-  .bd-detail{font-size:11px;color:var(--muted);margin-top:1px}
+  .bd-detail{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.35}
 
   /* Stat tiles */
   .tile b{display:block;font-size:28px;font-weight:700;
@@ -74,9 +75,14 @@
     z-index:40;opacity:0;transition:opacity .08s;white-space:nowrap}
 
   /* Provenance */
-  .prov-row{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;
-    align-items:center;padding:9px 0;border-top:1px solid var(--line);font-size:13px}
+  .prov-row{display:grid;grid-template-columns:1fr auto auto auto;gap:8px 10px;
+    align-items:center;padding:11px 0;border-top:1px solid var(--line);font-size:13px}
   .prov-row:first-child{border-top:0}
+  .prov-row .who{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:-4px}
+  @media(max-width:560px){
+    .prov-row{grid-template-columns:1fr}
+    .prov-row .pills{display:flex;gap:6px;flex-wrap:wrap}
+  }
   .pill{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--axis);
     color:var(--ink-2);white-space:nowrap}
   .q-confiavel{color:#7fdc9a;border-color:#25603a}
@@ -416,10 +422,14 @@ function renderProv(){
       sem_dados:"Sem dados"}[p.quality]||p.quality;
     const gap=p.gap_days==null?"—":p.gap_days+"d";
     return `<div class="prov-row">
-      <div><b>${p.label}</b> <span class="muted" style="font-size:12px">· fonte: ${p.source}</span></div>
-      <span class="pill">${p.coverage_30d}/30 dias</span>
-      <span class="pill">lacuna ${gap}</span>
-      <span class="pill q-${p.quality}">${q}</span></div>`;
+      <div><b>${p.label}</b></div>
+      <div class="pills">
+        <span class="pill">${p.coverage_30d}/30 dias</span>
+        <span class="pill">lacuna ${gap}</span>
+        <span class="pill q-${p.quality}">${q}</span>
+      </div>
+      <div class="who">fonte: ${p.source}${p.has_baseline
+        ? " · baseline pessoal estabelecido" : " · sem baseline ainda"}</div></div>`;
   }).join("");
 }
 
