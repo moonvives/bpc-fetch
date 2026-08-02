@@ -1,0 +1,16 @@
+{
+  "name": "VWAR Loop",
+  "short_name": "VWAR Loop",
+  "description": "App pessoal de observacao de vida, local-first, para a pulseira VWAR Loop Life.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0d0d",
+  "theme_color": "#0d0d0d",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%230d0d0d'/%3E%3Ccircle cx='96' cy='96' r='60' fill='none' stroke='%233987e5' stroke-width='16' stroke-linecap='round' stroke-dasharray='283' stroke-dashoffset='70' transform='rotate(-90 96 96)'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}
