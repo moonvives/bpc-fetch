@@ -104,6 +104,22 @@ struct DataQualityView: View {
             case .unavailable:
                 Text("Saúde indisponível neste aparelho.")
                     .font(.caption).foregroundStyle(Theme.critical)
+            case .missingEntitlement:
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Este build foi assinado sem a capacidade do HealthKit.")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.serious)
+                    Text("É o esperado ao instalar por AltStore ou SideStore com "
+                       + "um Apple ID gratuito: contas gratuitas não recebem a "
+                       + "capacidade do HealthKit, então o entitlement se perde "
+                       + "na reassinatura. Não é permissão negada — não há o que "
+                       + "autorizar nos Ajustes.\n\nPara a ponte com o G Band, "
+                       + "compile no Xcode com o seu próprio time de "
+                       + "desenvolvimento. Sem isso, use o Bluetooth direto na "
+                       + "aba Check-in ou registre os valores à mão: todo o "
+                       + "resto do app funciona normalmente.")
+                        .font(.caption).foregroundStyle(Theme.muted)
+                }
             case .failed(let message):
                 Text(message).font(.caption).foregroundStyle(Theme.critical)
             case .notRequested:

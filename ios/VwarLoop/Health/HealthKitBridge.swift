@@ -20,6 +20,11 @@ final class HealthKitBridge: ObservableObject {
         case notRequested
         case authorized
         case failed(String)
+        /// O app foi assinado sem o entitlement do HealthKit — o caso normal ao
+        /// instalar por AltStore/SideStore com um Apple ID gratuito, que não
+        /// recebe a capacidade do HealthKit. Merece mensagem própria: não é bug
+        /// nem permissão negada, e o resto do app continua funcionando.
+        case missingEntitlement
     }
 
     @Published private(set) var status: Status = .notRequested
@@ -65,7 +70,19 @@ final class HealthKitBridge: ObservableObject {
             try await store.requestAuthorization(toShare: [], read: readTypes)
             status = .authorized
         } catch {
-            status = .failed(error.localizedDescription)
+            // Sem o entitlement, o iOS recusa com "missing entitlement" em vez
+            // de simplesmente negar. Distinguir os dois evita que você fique
+            // procurando uma permissão que não existe para conceder.
+            let message = error.localizedDescription.lowercased()
+            let nsError = error as NSError
+            if message.contains("entitlement")
+                || message.contains("authorization request")
+                || nsError.code == HKError.errorAuthorizationDenied.rawValue
+                && message.contains("healthkit") {
+                status = .missingEntitlement
+            } else {
+                status = .failed(error.localizedDescription)
+            }
         }
     }
 
