@@ -16,15 +16,19 @@
 
 name: Build iOS IPA (unsigned)
 
+# Runner macOS consome minutos a uma taxa bem maior que Linux, entao o gatilho
+# de push cobre so a branch principal. Trabalho em branch e coberto pelo evento
+# de pull_request, sem duplicar a execucao.
 on:
   push:
-    branches: ["**"]
+    branches: [main]
     paths:
       - "ios/**"
       - ".github/workflows/ios-ipa.yml"
   pull_request:
     paths:
       - "ios/**"
+      - ".github/workflows/ios-ipa.yml"
   workflow_dispatch:
     inputs:
       create_release:
