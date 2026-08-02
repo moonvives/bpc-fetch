@@ -122,6 +122,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ios-v1.0.${{ github.run_number }}
+          # Sem isto a tag nasce apontando para a branch padrao, e nao para o
+          # commit que gerou o arquivo — quem fizer checkout da tag pega outro
+          # codigo.
+          target_commitish: ${{ github.sha }}
           name: VWAR Loop iOS 1.0.${{ github.run_number }}
           files: ios/build/VwarLoop-unsigned.ipa
           body: |
