@@ -96,7 +96,7 @@ final class AppleHealthSource: ObservableObject {
 
     /// Nomes de origem que indicam aparelho de braço. Só estes formam a série de
     /// tendência; o restante fica registrado como entrada manual.
-    private static let cuffSourceHints = ["omron", "connect", "hem-"]
+    private nonisolated static let cuffSourceHints = ["omron", "connect", "hem-"]
 
     func fetchPressure(days: Int = 180) async -> [PressureSample] {
         guard HKHealthStore.isHealthDataAvailable() else { return [] }
@@ -395,7 +395,7 @@ final class AppleHealthSource: ObservableObject {
         return records
     }
 
-    private static func activityName(_ type: HKWorkoutActivityType) -> String {
+    private nonisolated static func activityName(_ type: HKWorkoutActivityType) -> String {
         switch type {
         case .running: return "Corrida"
         case .walking: return "Caminhada"

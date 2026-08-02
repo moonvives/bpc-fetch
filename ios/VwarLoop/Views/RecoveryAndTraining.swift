@@ -101,39 +101,43 @@ struct RecoveryView: View {
         }
     }
 
-    /// Frase de posição relativa, com contribuintes e ausências declarados.
-    private var interpretationPanel: some View {
-        let usable = contributors.filter { $0.confidence.supportsInterpretation }
-        let deviations = usable.compactMap { t -> Double? in
+    private var usableContributors: [TrendAnalysis] {
+        contributors.filter { $0.confidence.supportsInterpretation }
+    }
+
+    /// Desvios relativos de cada contribuinte. FC de repouso e FC noturna acima do
+    /// baseline pesam na direção oposta às demais, então entram invertidas.
+    private var relativeDeviations: [Double] {
+        usableContributors.compactMap { t in
             guard let current = t.currentValue, let base = t.baseline,
                   base != 0 else { return nil }
-            // FC de repouso e FC noturna acima do baseline pesam na direção
-            // oposta às demais.
             let raw = (current - base) / abs(base)
-            let inverted = t.metricLabel.contains("FC")
-            return inverted ? -raw : raw
+            return t.metricLabel.contains("FC") ? -raw : raw
         }
+    }
+
+    /// Posição relativa à faixa recente, ou nulo quando não há base suficiente.
+    private var recoveryPhrase: String? {
+        guard usableContributors.count >= 2 else { return nil }
+        let deviations = relativeDeviations
+        guard !deviations.isEmpty, let average = Baseline.mean(deviations) else {
+            return nil
+        }
+        if average < -0.05 { return "Recuperação abaixo da sua faixa recente" }
+        if average > 0.05 { return "Recuperação acima da sua faixa recente" }
+        return "Recuperação próxima da sua faixa recente"
+    }
+
+    /// Frase de posição relativa, com contribuintes e ausências declarados.
+    private var interpretationPanel: some View {
+        let usable = usableContributors
 
         return Panel {
             Text("Tendência de recuperação")
                 .font(.headline)
                 .foregroundStyle(Palette.ink(scheme))
 
-            if usable.count < 2 || deviations.isEmpty {
-                Text(TrendAnalysis.insufficientData)
-                    .font(.body)
-                    .foregroundStyle(Palette.inkMuted(scheme))
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                let average = Baseline.mean(deviations) ?? 0
-                let phrase: String
-                if average < -0.05 {
-                    phrase = "Recuperação abaixo da sua faixa recente"
-                } else if average > 0.05 {
-                    phrase = "Recuperação acima da sua faixa recente"
-                } else {
-                    phrase = "Recuperação próxima da sua faixa recente"
-                }
+            if let phrase = recoveryPhrase {
                 Text(phrase)
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(Palette.ink(scheme))
@@ -155,6 +159,11 @@ struct RecoveryView: View {
                         .foregroundStyle(Palette.inkMuted(scheme))
                         .fixedSize(horizontal: false, vertical: true)
                 }
+            } else {
+                Text(TrendAnalysis.insufficientData)
+                    .font(.body)
+                    .foregroundStyle(Palette.inkMuted(scheme))
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Text("Este indicador descreve tendências dos seus registros. Não "
