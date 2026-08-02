@@ -1,0 +1,132 @@
+# Compila o app iOS num runner macOS e publica um IPA NAO ASSINADO.
+#
+# Por que nao assinado: assinar exigiria subir certificado e provisioning
+# profile da Apple para os secrets do repositorio. Nada de credencial Apple
+# entra aqui. Voce assina depois, localmente, com o seu proprio Apple ID
+# (AltStore, SideStore ou Xcode).
+#
+# ATENCAO — um IPA nao assinado nao instala sozinho. O Modo de Desenvolvedor
+# do iOS nao contorna isso: ele libera a EXECUCAO de apps ja assinados com
+# certificado de desenvolvimento, nao a instalacao de binarios sem assinatura.
+# Veja ios/README.md para o passo a passo de instalacao.
+#
+# O IPA sai em duas formas:
+#   - artefato do workflow (aba Actions, retido 90 dias)
+#   - release, quando disparado manualmente com "create_release" marcado
+
+name: Build iOS IPA (unsigned)
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios-ipa.yml"
+  pull_request:
+    paths:
+      - "ios/**"
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: "Publicar tambem como release"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Selecionar Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Mostrar versoes
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Instalar XcodeGen
+        run: brew install xcodegen
+
+      - name: Gerar o projeto Xcode
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Compilar (sem assinatura)
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project VwarLoop.xcodeproj \
+            -scheme VwarLoop \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath "$PWD/build/VwarLoop.xcarchive" \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_ENTITLEMENTS="" \
+            DEVELOPMENT_TEAM="" \
+            archive | xcpretty || \
+          xcodebuild \
+            -project VwarLoop.xcodeproj \
+            -scheme VwarLoop \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath "$PWD/build/VwarLoop.xcarchive" \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_ENTITLEMENTS="" \
+            DEVELOPMENT_TEAM="" \
+            archive
+
+      - name: Empacotar o IPA
+        working-directory: ios
+        run: |
+          APP_PATH="build/VwarLoop.xcarchive/Products/Applications"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "Archive nao produziu um .app em $APP_PATH"
+            find build -maxdepth 4 -name "*.app" || true
+            exit 1
+          fi
+          mkdir -p build/Payload
+          cp -R "$APP_PATH/"*.app build/Payload/
+          cd build
+          zip -qry VwarLoop-unsigned.ipa Payload
+          rm -rf Payload
+          ls -lh VwarLoop-unsigned.ipa
+
+      - name: Publicar o IPA como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: VwarLoop-unsigned-ipa
+          path: ios/build/VwarLoop-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publicar como release
+        if: github.event_name == 'workflow_dispatch' && inputs.create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ios-v1.0.${{ github.run_number }}
+          name: VWAR Loop iOS 1.0.${{ github.run_number }}
+          files: ios/build/VwarLoop-unsigned.ipa
+          body: |
+            IPA **nao assinado** do VWAR Loop para iOS.
+
+            Assine com o seu proprio Apple ID antes de instalar — AltStore,
+            SideStore ou compilando no Xcode. Instrucoes completas em
+            `ios/README.md`.
+
+            Compilar no Xcode com o seu time e o caminho recomendado: e o unico
+            que preserva o entitlement do HealthKit, sem o qual o app nao
+            aparece na Saude da Apple e nao recebe os dados do G Band.

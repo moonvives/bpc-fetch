@@ -1,0 +1,70 @@
+# XcodeGen spec — gera o Xcode project a partir deste arquivo.
+#
+#   brew install xcodegen
+#   cd ios && xcodegen generate && open VwarLoop.xcodeproj
+#
+# Antes de compilar no SEU iPhone/iPad, troque:
+#   - PRODUCT_BUNDLE_IDENTIFIER para um id que voce controla
+#   - DEVELOPMENT_TEAM para o seu Team ID da Apple (Xcode > Settings > Accounts)
+# Sem isso o Xcode nao consegue assinar. A CI compila sem assinatura, entao
+# ela funciona sem nenhum desses valores.
+
+name: VwarLoop
+options:
+  bundleIdPrefix: com.example.vwarloop
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    SWIFT_STRICT_CONCURRENCY: minimal
+    # Deixe DEVELOPMENT_TEAM vazio para a CI. Preencha no Xcode local.
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  VwarLoop:
+    type: application
+    platform: iOS
+    sources:
+      - path: VwarLoop
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.vwarloop
+        PRODUCT_NAME: VWAR Loop
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: >-
+          UIInterfaceOrientationPortrait
+          UIInterfaceOrientationLandscapeLeft
+          UIInterfaceOrientationLandscapeRight
+        INFOPLIST_KEY_UIUserInterfaceStyle: Dark
+        TARGETED_DEVICE_FAMILY: "1,2"   # iPhone e iPad
+    info:
+      path: VwarLoop/Info.plist
+      properties:
+        CFBundleDisplayName: VWAR Loop
+        # Textos que o iOS mostra ao pedir permissao. Sao obrigatorios:
+        # sem eles o app trava ao acessar Saude ou Bluetooth.
+        NSHealthShareUsageDescription: >-
+          O VWAR Loop le seus dados de saude para calcular recuperacao e
+          tendencias. Tudo fica no aparelho; nada e enviado para servidor.
+        NSHealthUpdateUsageDescription: >-
+          O VWAR Loop grava check-ins na Saude da Apple caso voce autorize.
+        NSBluetoothAlwaysUsageDescription: >-
+          O VWAR Loop conecta na sua pulseira VWAR por Bluetooth para ler
+          frequencia cardiaca e intervalos entre batimentos.
+        UIBackgroundModes:
+          - bluetooth-central
+    entitlements:
+      path: VwarLoop/VwarLoop.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
